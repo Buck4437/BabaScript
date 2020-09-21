@@ -10,15 +10,16 @@ function lexer (code) {
               })
 }
 
+
+
 function parser (tokens) {
   var AST = {
     type: 'BABASCRIPT',
     body: []
   }
-  // extract a token at a time as current_token. Loop until we are out of tokens.
-  while (tokens.length > 0){
-    var current_token = tokens.shift()
 
+  function statementParser(){
+    var current_token = tokens.shift()
     if (current_token.type === 'Object') {
       var operator_token = tokens.shift()
       if (operator_token.type === 'Operator') {
@@ -46,6 +47,7 @@ function parser (tokens) {
             }
           break;
           case 'add' :
+          case 'plus' :
             argument = tokens.shift()
             if (argument.type === 'Object' || argument.type === 'Number' || argument.type === 'String') {
               var expression = {
@@ -63,7 +65,72 @@ function parser (tokens) {
               })
               AST.body.push(expression)    // push the expression object to body of our AST
             } else {
-              throw '"add" must be followed by a noun.'
+              throw `\"${operator_token.value}\" must be followed by a noun.`
+            }
+          break;
+          case 'minus' :
+          case 'sub' :
+            argument = tokens.shift()
+            if (argument.type === 'Object' || argument.type === 'Number' || argument.type === 'String') {
+              var expression = {
+                type: 'Operator',
+                name: 'minus',
+                arguments: []
+              }
+              expression.arguments.push({  // add argument information to expression object
+                type: 'Object',
+                value: current_token.value
+              })
+              expression.arguments.push({  // add argument information to expression object
+                type: argument.type,
+                value: argument.value
+              })
+              AST.body.push(expression)    // push the expression object to body of our AST
+            } else {
+              throw `\"${operator_token.value}\" must be followed by a noun.`
+            }
+          break;
+          case 'times' :
+          case 'mul' :
+            argument = tokens.shift()
+            if (argument.type === 'Object' || argument.type === 'Number' || argument.type === 'String') {
+              var expression = {
+                type: 'Operator',
+                name: 'times',
+                arguments: []
+              }
+              expression.arguments.push({  // add argument information to expression object
+                type: 'Object',
+                value: current_token.value
+              })
+              expression.arguments.push({  // add argument information to expression object
+                type: argument.type,
+                value: argument.value
+              })
+              AST.body.push(expression)    // push the expression object to body of our AST
+            } else {
+              throw `\"${operator_token.value}\" must be followed by a noun.`
+            }
+          break;
+          case 'div' :
+            argument = tokens.shift()
+            if (argument.type === 'Object' || argument.type === 'Number' || argument.type === 'String') {
+              var expression = {
+                type: 'Operator',
+                name: 'div',
+                arguments: []
+              }
+              expression.arguments.push({  // add argument information to expression object
+                type: 'Object',
+                value: current_token.value
+              })
+              expression.arguments.push({  // add argument information to expression object
+                type: argument.type,
+                value: argument.value
+              })
+              AST.body.push(expression)    // push the expression object to body of our AST
+            } else {
+              throw '"div" must be followed by a noun.'
             }
           break;
           case 'log' :
@@ -93,6 +160,11 @@ function parser (tokens) {
         throw ('An Object must be followed by an Operator')
       }
     }
+  }
+
+  // extract a token at a time as current_token. Loop until we are out of tokens.
+  while (tokens.length > 0){
+    statementParser()
   }
   return AST
 }
@@ -144,6 +216,54 @@ function transpiler(ast){
         }
         else { //string
           vars[args[0].value] += args[1].value
+        }
+      break
+      case 'minus' :
+        if (args[1].type === 'Object'){
+          if (vars[args[1].value] !== undefined){
+              vars[args[0].value] -= vars[args[1].value]
+          }
+          else{
+            throw (`Error: ${args[1].value} is not defined`)
+          }
+        }
+        else if (args[1].type === 'Number'){
+          vars[args[0].value] -= Number(args[1].value)
+        }
+        else { //string
+          vars[args[0].value] -= args[1].value
+        }
+      break
+      case 'times' :
+        if (args[1].type === 'Object'){
+          if (vars[args[1].value] !== undefined){
+              vars[args[0].value] *= vars[args[1].value]
+          }
+          else{
+            throw (`Error: ${args[1].value} is not defined`)
+          }
+        }
+        else if (args[1].type === 'Number'){
+          vars[args[0].value] *= Number(args[1].value)
+        }
+        else { //string
+          vars[args[0].value] *= args[1].value
+        }
+      break
+      case 'div' :
+        if (args[1].type === 'Object'){
+          if (vars[args[1].value] !== undefined){
+              vars[args[0].value] /= vars[args[1].value]
+          }
+          else{
+            throw (`Error: ${args[1].value} is not defined`)
+          }
+        }
+        else if (args[1].type === 'Number'){
+          vars[args[0].value] /= Number(args[1].value)
+        }
+        else { //string
+          vars[args[0].value] /= args[1].value
         }
       break
       case 'log' :
