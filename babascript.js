@@ -3,6 +3,7 @@ function lexer (code) {
           .filter(t => t.length > 0)
           .map(function (t) {
                 return !isNaN(t) ? {type: 'Number', value: t}
+                      : t.charAt(0) === '$' ? {type: 'String', value: t.substring(1)} //temporary
                       : t === t.toUpperCase() ? {type: 'Property', value: t}
                       : t.charAt(0) === t.charAt(0).toUpperCase() ? {type: 'Object', value: t}
                       : {type: 'Operator', value: t}
@@ -25,7 +26,7 @@ function parser (tokens) {
         switch (operator_token.value){
           case 'is' :
             argument = tokens.shift()
-            if (argument.type === 'Property' || argument.type === 'Object' || argument.type === 'Number') {
+            if (argument.type === 'Property' || argument.type === 'Object' || argument.type === 'Number' || argument.type === 'String') {
               var expression = {
                 type: 'Operator',
                 name: 'is',
@@ -44,9 +45,30 @@ function parser (tokens) {
               throw '"is" must be followed by a noun.'
             }
           break;
+          case 'add' :
+            argument = tokens.shift()
+            if (argument.type === 'Object' || argument.type === 'Number' || argument.type === 'String') {
+              var expression = {
+                type: 'Operator',
+                name: 'add',
+                arguments: []
+              }
+              expression.arguments.push({  // add argument information to expression object
+                type: 'Object',
+                value: current_token.value
+              })
+              expression.arguments.push({  // add argument information to expression object
+                type: argument.type,
+                value: argument.value
+              })
+              AST.body.push(expression)    // push the expression object to body of our AST
+            } else {
+              throw '"add" must be followed by a noun.'
+            }
+          break;
           case 'log' :
             argument = tokens.shift()
-            if (argument.type === 'Object' || argument.type === 'Number') {
+            if (argument.type === 'Object' || argument.type === 'Number' || argument.type === 'String') {
               var expression = {
                 type: 'Command',
                 name: 'log',
@@ -84,12 +106,12 @@ function transpiler(ast){
       case 'is' :
         if (args[1].type === 'Property'){
           switch (args[1].value){
-            case 'Num':
-            case 'Number':
+            case 'NUM':
+            case 'NUMBER':
             vars[args[0].value] = 0
 
-            case 'Str':
-            case 'String':
+            case 'STR':
+            case 'STRING':
             vars[args[0].value] = ""
           }
         }
@@ -104,8 +126,24 @@ function transpiler(ast){
         else if (args[1].type === 'Number'){
           vars[args[0].value] = Number(args[1].value)
         }
-        else {
+        else { //string
           vars[args[0].value] = args[1].value
+        }
+      break
+      case 'add' :
+        if (args[1].type === 'Object'){
+          if (vars[args[1].value] !== undefined){
+              vars[args[0].value] += vars[args[1].value]
+          }
+          else{
+            throw (`Error: ${args[1].value} is not defined`)
+          }
+        }
+        else if (args[1].type === 'Number'){
+          vars[args[0].value] += Number(args[1].value)
+        }
+        else { //string
+          vars[args[0].value] += args[1].value
         }
       break
       case 'log' :
@@ -117,7 +155,7 @@ function transpiler(ast){
             throw (`Error: ${args[1].value} is not defined`)
           }
         }
-        else {
+        else { //string, Number
           console.log(`${args[0].value} log: ${args[1].value}`)
         }
       break
